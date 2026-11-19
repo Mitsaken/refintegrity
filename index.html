@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src https://api.crossref.org https://api.datacite.org https://api.openalex.org https://doi.org https://conversionlogic-waitlist.conversionlogic.workers.dev; base-uri 'none'; form-action 'self' https://conversionlogic-waitlist.conversionlogic.workers.dev">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="google-site-verification" content="TbQiOlV9inpmQskmAp9DLlirtIKnQA6jMJTxacC56JY" />
+  <meta name="robots" content="index, follow" />
+  <title>RefIntegrity — Academic Citation Checker, Retracted Paper &amp; DOI Auditor</title>
+  <meta name="description" content="Free browser-based academic citation checker and DOI validator. Audit manuscript bibliographies and BibTeX against Crossref Crossmark, DataCite, OpenAlex, and doiRA to catch retracted papers and hallucinated references." />
+  <link rel="canonical" href="https://mitsaken.github.io/refintegrity/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Conversionlogic" />
+  <meta property="og:title" content="RefIntegrity — Academic Citation Checker &amp; Retracted Paper Auditor" />
+  <meta property="og:description" content="Verify manuscript DOIs and references against Crossref Crossmark, DataCite, OpenAlex, and doiRA directly in your browser. Detect retracted papers and broken DOIs before journal submission." />
+  <meta property="og:url" content="https://mitsaken.github.io/refintegrity/" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="RefIntegrity — Academic Citation &amp; Retraction Auditor" />
+  <meta name="twitter:description" content="Audit BibTeX and bibliographies against Crossref, DataCite &amp; OpenAlex. Spot retracted papers and non-existent DOIs in seconds." />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "RefIntegrity",
+        "applicationCategory": "EducationalApplication",
+        "operatingSystem": "Web Browser",
+        "url": "https://mitsaken.github.io/refintegrity/",
+        "description": "Browser-side academic citation and DOI verification workbench querying official Crossref Crossmark, DataCite, OpenAlex, and doiRA registries to flag retracted papers and unresolvable references.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "EUR"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Conversionlogic"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How does RefIntegrity detect retracted papers and fabricated DOIs?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "RefIntegrity extracts DOIs (including SICI and DataCite identifiers) and non-DOI bibliographic entries, then queries Crossref (Crossmark update records and title retraction notices), DataCite, OpenAlex, and doi.org Registration Agency records directly from your browser."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Are my manuscript files uploaded to Conversionlogic servers?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Your full manuscript text stays in local browser memory. Only extracted DOI identifiers and individual bibliographic citation queries are sent from your browser directly to public scholarly registries (api.crossref.org, api.datacite.org, api.openalex.org, and doi.org)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is included in the free web tool vs RefIntegrity Pro CLI?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "The free browser workbench audits up to 100 citations per batch with CSV, Markdown, JSON, clean BibTeX, and print PDF exports. RefIntegrity Pro (planned 19 EUR one-time launch price, currently 0 EUR Priority Waitlist) adds a standalone batch runner for 1,000+ citations with disk caching, SHA-256 tamper-evident audit manifests, and GitHub Actions PR gates."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- COMPACT EDITORIAL HEADER -->
+  <header class="site-header no-print">
+    <div class="header-inner">
+      <div class="brand-lockup">
+        <a href="#" class="brand-title">RefIntegrity</a>
+        <span class="brand-subtitle">Scholarly Citation &amp; Retraction Verification · Crossref, DataCite &amp; OpenAlex</span>
+      </div>
+      <div class="header-actions">
+        <a href="#pro-waitlist" class="btn btn-secondary btn-sm">Batch CLI &amp; CI Gate (Waitlist)</a>
+        <button type="button" id="btn-header-print" class="btn btn-secondary btn-sm">Print Report</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MANUSCRIPT VERIFICATION DESK -->
+  <main class="desk-main">
+
+    <!-- LEFT 38%: SUBMISSION INPUT -->
+    <section class="desk-panel no-print" aria-label="Bibliography submission">
+      <div>
+        <span class="kicker">Manuscript Verification Desk</span>
+        <h1 class="desk-heading">Verify Academic Citations Against Official Registries</h1>
+        <p class="desk-lead">
+          Stop checking hallucinated LLM references by hand — verify DOIs and plain citations deterministically against Crossref, DataCite, OpenAlex, and doiRA directly in your browser.
+        </p>
+      </div>
+
+      <div class="tabs-row" role="tablist" aria-label="Input format">
+        <button type="button" id="tab-dois" class="mode-tab is-active" data-tab="dois">Direct DOIs</button>
+        <button type="button" id="tab-text" class="mode-tab" data-tab="text">Raw Bibliography</button>
+        <button type="button" id="tab-bibtex" class="mode-tab" data-tab="bibtex">BibTeX Parser</button>
+        <label class="mode-tab inline-flex-tab" for="bibFileInput">
+          Upload .bib / .txt
+        </label>
+        <input type="file" id="bibFileInput" accept=".bib,.ris,.txt,.md" hidden />
+      </div>
+
+      <div class="samples-row">
+        <span>Load sample dataset:</span>
+        <button type="button" class="text-action" data-sample="retracted">Retracted papers</button>
+        <button type="button" class="text-action" data-sample="benchmarks">Verified benchmarks</button>
+        <button type="button" class="text-action" data-sample="hallucinations">Non-existent / 404 DOIs</button>
+      </div>
+
+      <div>
+        <div class="input-meta-row">
+          <label for="citationInput" id="inputLabel">Paste DOIs (one per line, handles SICI &amp; DataCite):</label>
+          <span id="detectedCount" class="detected-count tnum">0 DOIs detected</span>
+        </div>
+        <textarea id="citationInput" class="citation-textarea" rows="9" placeholder="10.1016/S0140-6736(97)11096-0&#10;10.1145/3065386&#10;10.5281/zenodo.1234567&#10;10.1016/j.ai.2024.999999"></textarea>
+      </div>
+
+      <div class="submit-bar">
+        <div class="btn-group-wrap">
+          <button type="button" id="runAuditBtn" class="btn btn-primary">Audit Citations</button>
+          <button type="button" id="clearInputBtn" class="btn btn-secondary">Clear</button>
+        </div>
+        <span class="muted-xs tnum">Up to 100 citations per browser run (DOIs &amp; title/author match)</span>
+      </div>
+
+      <div id="progressContainer" class="progress-box" hidden>
+        <div class="progress-head tnum">
+          <span id="progressStatus">Querying Crossref, DataCite &amp; OpenAlex...</span>
+          <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-track">
+          <div id="progressBar" class="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="privacy-note">
+        <strong>Browser-Side Processing:</strong> Your manuscript text never leaves your browser or reaches Conversionlogic servers. Extracted DOIs and citation queries are sent directly from your browser to official public APIs (<span class="mono">api.crossref.org</span>, <span class="mono">api.datacite.org</span>, <span class="mono">api.openalex.org</span>, <span class="mono">doi.org</span>).
+      </div>
+    </section>
+
+    <!-- RIGHT 62%: AUDIT DESK -->
+    <section class="results-column" aria-label="Verification results">
+
+      <div class="print-only">
+        <h1 class="desk-heading">RefIntegrity — Citation Verification Report</h1>
+        <p class="desk-lead" id="printReportMeta">Audited via Crossref, DataCite &amp; OpenAlex public registries</p>
+      </div>
+
+      <!-- Empty Specification Panel (shown prior to audit) -->
+      <div id="emptyProtocol" class="empty-protocol no-print">
+        <div>
+          <span class="kicker">Verification Protocol</span>
+          <h2 class="desk-heading protocol-heading">Multi-Registry Cross-Check Ready</h2>
+          <p class="desk-lead mt-1">
+            Submit up to 100 citations (DOIs or non-DOI references / BibTeX) on the left to generate a line-by-line provenance and retraction report.
+          </p>
+        </div>
+
+        <div class="protocol-grid">
+          <div class="protocol-card">
+            <h3>1. Crossref &amp; Crossmark</h3>
+            <p>Checks formal publisher retraction notices, expressions of concern, journal titles, and publication dates.</p>
+          </div>
+          <div class="protocol-card">
+            <h3>2. DataCite Fallback</h3>
+            <p>Resolves research datasets, software releases, Zenodo archives, and technical preprints outside Crossref.</p>
+          </div>
+          <div class="protocol-card">
+            <h3>3. OpenAlex Enricher</h3>
+            <p>Cross-references citation counts and retraction flags across open scholarly graph records.</p>
+          </div>
+        </div>
+
+        <p class="muted-sm">
+          Output formats available after audit: Markdown report, formula-safe CSV, structured JSON record, BibTeX cleanup, and A4 Print/PDF.
+        </p>
+      </div>
+
+      <!-- Populated Results Container -->
+      <div id="resultsSection" class="results-container" hidden>
+
+        <div id="sampleDemoBanner" class="callout callout-sample no-print" hidden>
+          <strong>Sample Demo Dataset:</strong> Showing verification results for built-in test DOIs. Paste your own manuscript references to run a live bibliography check.
+        </div>
+
+        <div id="criticalRetractionAlert" class="callout callout-critical" hidden>
+          <div>
+            <div class="callout-title">Retraction Alert: Formal Retraction Flagged in Bibliography</div>
+            <p class="muted-sm mt-1">One or more audited citations carry a formal publisher retraction or Crossmark notice. Review flagged rows before submission.</p>
+          </div>
+          <button type="button" id="btn-view-retractions" class="btn btn-secondary btn-sm no-print">Show Retracted Only</button>
+        </div>
+
+        <!-- Summary Strip -->
+        <div class="metrics-strip tnum">
+          <div class="metric-cell">
+            <span class="metric-label">Integrity Score</span>
+            <span id="scoreValue" class="metric-num">--</span>
+            <span id="scoreLabel" class="metric-sub">Awaiting audit</span>
+          </div>
+          <div class="metric-cell">
+            <span class="metric-label">Audited DOIs</span>
+            <span id="statTotal" class="metric-num">--</span>
+            <span class="metric-sub">In current batch</span>
+          </div>
+          <div class="metric-cell">
+            <span class="metric-label">Verified Active</span>
+            <span id="statVerified" class="metric-num is-pass">--</span>
+            <span id="statVerifiedPercent" class="metric-sub">Pending audit</span>
+          </div>
+          <div class="metric-cell">
+            <span class="metric-label">Retracted</span>
+            <span id="statRetracted" class="metric-num is-fail">--</span>
+            <span id="statRetractedLabel" class="metric-sub">Pending audit</span>
+          </div>
+          <div class="metric-cell">
+            <span class="metric-label">Not Found / 404</span>
+            <span id="statNotFound" class="metric-num is-warn">--</span>
+            <span id="statNotFoundLabel" class="metric-sub">Across 3 registries</span>
+          </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="results-toolbar no-print">
+          <div class="filter-group tnum">
+            <button type="button" id="filter-all" class="filter-btn is-active" data-filter="all">All (<span id="count-all">0</span>)</button>
+            <button type="button" id="filter-verified" class="filter-btn" data-filter="verified">Verified (<span id="count-verified">0</span>)</button>
+            <button type="button" id="filter-retracted" class="filter-btn" data-filter="retracted">Retracted (<span id="count-retracted">0</span>)</button>
+            <button type="button" id="filter-not_found" class="filter-btn" data-filter="not_found">Not Found (<span id="count-not_found">0</span>)</button>
+            <button type="button" id="filter-network_error" class="filter-btn" data-filter="network_error" hidden>Network Error (<span id="count-network_error">0</span>)</button>
+          </div>
+          <div class="export-group">
+            <button type="button" id="btn-dl-md" class="btn btn-secondary btn-sm">Markdown</button>
+            <button type="button" id="btn-dl-csv" class="btn btn-secondary btn-sm">CSV</button>
+            <button type="button" id="btn-dl-json" class="btn btn-secondary btn-sm">JSON</button>
+            <button type="button" id="btn-copy-bib" class="btn btn-secondary btn-sm">Copy BibTeX</button>
+            <button type="button" id="btn-print" class="btn btn-primary btn-sm">Print / PDF</button>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="audit-table-wrap">
+          <table class="audit-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Status</th>
+                <th>Work Title &amp; Authors</th>
+                <th>Venue &amp; Year</th>
+                <th>Citations</th>
+                <th>DOI &amp; Registry</th>
+                <th class="no-print">Inspect</th>
+              </tr>
+            </thead>
+            <tbody id="auditTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- STATIC WAITLIST SECTION (0-EUR VALIDATION MODE) -->
+  <section id="pro-waitlist" class="waitlist-section no-print" aria-labelledby="waitlist-heading">
+    <div class="waitlist-card">
+      <div>
+        <span class="kicker">Upcoming Release · Waitlist</span>
+        <div><span class="price-badge-pill">Planned launch price: 19 € (one-time, VAT incl.) · 0 € today — Priority Waitlist</span></div>
+        <h2 id="waitlist-heading" class="waitlist-title">RefIntegrity Pro — High-Volume Batch Runner &amp; CI Toolkit (Waitlist)</h2>
+        <p class="waitlist-desc">
+          The free browser auditor handles up to 100 citations directly against Crossref, DataCite, OpenAlex, and DOI Registration Agencies with zero registration. Join the validation waitlist if your team needs automated offline or CI workflows (zero charge today):
+        </p>
+        <ul class="waitlist-features">
+          <li>High-volume Node batch runner (<span class="mono">batch-runner.js</span>) auditing 1,000+ <span class="mono">.bib</span>, <span class="mono">.ris</span>, <span class="mono">.txt</span>, or <span class="mono">.md</span> references with persistent JSON disk caching and polite backoff.</li>
+          <li>Verified BibTeX cleaner/rebuilder, SHA-256 tamper-evident audit manifest (<span class="mono">audit-manifest.sha256.json</span>), and batch HTML/Markdown/CSV exports.</li>
+          <li>Ready-to-drop GitHub Actions PR gate workflow (<span class="mono">--fail-on retracted,notfound</span>) to block retracted or fabricated DOIs before merge.</li>
+        </ul>
+      </div>
+
+      <form id="proWaitlistForm" class="waitlist-form" data-project="refintegrity" novalidate>
+        <label for="proWaitlistAdvice" class="field-label">Primary workflow need (optional)</label>
+        <select id="proWaitlistAdvice" class="field-input">
+          <option value="batch_1000_cache">Batch CLI for 1,000+ citations with disk cache</option>
+          <option value="github_actions_gate">GitHub Actions PR retraction gate</option>
+          <option value="sha256_bib_clean">BibTeX cleaner &amp; SHA-256 audit manifest</option>
+        </select>
+        <label for="proWaitlistEmail" class="field-label">Notify email (zero charge or obligation)</label>
+        <div class="waitlist-input-row">
+          <input type="email" id="proWaitlistEmail" class="field-input" placeholder="researcher@university.edu" required />
+          <button type="submit" id="proWaitlistSubmit" class="btn btn-primary">Join Waitlist</button>
+        </div>
+        <label class="waitlist-consent">
+          <input type="checkbox" id="proWaitlistConsent" required />
+          <span>I explicitly consent to receive a one-time notification when RefIntegrity Pro launches, in line with the <a href="privacy.html">Privacy &amp; Legal Notice</a> (GDPR Art. 6(1)(a), opt out anytime).</span>
+        </label>
+        <p id="proWaitlistMsg" class="waitlist-msg" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- FAQ SECTION -->
+  <section class="faq-section no-print" aria-label="Frequently Asked Questions">
+    <div class="faq-card">
+      <h2 class="faq-heading">Frequently Asked Questions (DOI Auditing &amp; Retraction Checks)</h2>
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>How does RefIntegrity detect retracted papers and fabricated DOIs?</summary>
+          <p>RefIntegrity extracts DOIs (including SICI and DataCite identifiers) and non-DOI bibliographic entries, then queries Crossref (Crossmark update records and title retraction notices), DataCite, OpenAlex, and doi.org Registration Agency records directly from your browser.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Are my manuscript files uploaded to Conversionlogic servers?</summary>
+          <p>No. Your full manuscript text stays in local browser memory. Only extracted DOI identifiers and individual bibliographic citation queries are sent from your browser directly to public scholarly registries (<span class="mono">api.crossref.org</span>, <span class="mono">api.datacite.org</span>, <span class="mono">api.openalex.org</span>, and <span class="mono">doi.org</span>).</p>
+        </details>
+        <details class="faq-item">
+          <summary>What is included in the free web tool vs RefIntegrity Pro CLI?</summary>
+          <p>The free browser workbench audits up to 100 citations per batch with CSV, Markdown, JSON, clean BibTeX, and print PDF exports. RefIntegrity Pro (planned 19 EUR one-time launch price, currently 0 EUR Priority Waitlist) adds a standalone batch runner for 1,000+ citations with disk caching, SHA-256 tamper-evident audit manifests, and GitHub Actions PR gates.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="site-footer no-print">
+    <nav class="footer-tools-nav" aria-label="Conversionlogic Developer and Audit Suite">
+      <strong>Conversionlogic Suite:</strong>
+      <a class="footer-tool-link" href="https://mitsaken.github.io/api-drift-sentinel/" target="_blank" rel="noopener noreferrer">API Drift Sentinel</a>
+      <a class="footer-tool-link" href="https://mitsaken.github.io/policydelta-radar/" target="_blank" rel="noopener noreferrer">PolicyDelta Radar</a>
+      <a class="footer-tool-link" href="https://scopekit-gr.pages.dev/" target="_blank" rel="noopener noreferrer">ScopeKit GR</a>
+      <a class="footer-tool-link" href="https://eshop-compliance-doctor.pages.dev/" target="_blank" rel="noopener noreferrer">eShop Compliance Audit</a>
+      <a class="footer-tool-link" href="https://greek-procurement-radar.pages.dev/" target="_blank" rel="noopener noreferrer">Greek Procurement Radar</a>
+      <a class="footer-tool-link" href="https://espa-screener-gr.pages.dev/" target="_blank" rel="noopener noreferrer">ESPA Screener</a>
+      <a class="footer-tool-link" href="https://athens-rental-monitor.pages.dev/" target="_blank" rel="noopener noreferrer">Athens Rental Monitor</a>
+      <a class="footer-tool-link" href="https://athens-relocation-matrix.pages.dev/" target="_blank" rel="noopener noreferrer">Athens Expat Matrix</a>
+      <a class="footer-tool-link" href="https://praktika-gr.pages.dev/" target="_blank" rel="noopener noreferrer">Praktika GR</a>
+    </nav>
+    <div class="footer-inner">
+      <span><strong>RefIntegrity</strong> · Conversionlogic · <a href="privacy.html" class="footer-tool-link">Privacy &amp; Legal Notice</a> · Updated: 2026-11-19</span>
+      <span>Queries public Crossref, DataCite, OpenAlex &amp; doi.org APIs directly from browser · 0€ Validation Mode</span>
+    </div>
+  </footer>
+
+  <!-- NATIVE DETAIL DIALOG -->
+  <dialog id="detailDialog" class="detail-dialog">
+    <div class="dialog-inner">
+      <div class="dialog-head">
+        <div>
+          <span id="modalStatusBadge" class="status-label verified">Verified</span>
+          <h3 id="modalTitle" class="work-title dialog-title"></h3>
+        </div>
+        <button type="button" id="btn-close-dialog" class="btn btn-secondary btn-sm">Close</button>
+      </div>
+      <div class="dialog-grid">
+        <div>
+          <div class="dialog-field-label">Authors</div>
+          <p id="modalAuthors"></p>
+        </div>
+        <div>
+          <div class="dialog-field-label">Journal / Venue</div>
+          <p id="modalJournal"></p>
+        </div>
+        <div>
+          <div class="dialog-field-label">Publication Year</div>
+          <p id="modalYear" class="tnum"></p>
+        </div>
+        <div>
+          <div class="dialog-field-label">Citations</div>
+          <p id="modalCitations" class="tnum"></p>
+        </div>
+      </div>
+      <div>
+        <div class="dialog-field-label">DOI Identifier</div>
+        <p><a id="modalDoiLink" href="#" target="_blank" rel="noopener noreferrer" class="doi-link"></a></p>
+      </div>
+      <div id="modalRetractionAlertBox" class="retract-reason" hidden>
+        <strong>Retraction / Crossmark Notice:</strong>
+        <p id="modalRetractionText" class="mt-1"></p>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
